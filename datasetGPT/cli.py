@@ -1,5 +1,5 @@
 import click
-from typing import List
+from typing import List, Tuple
 from .conversations import generate_conversations_dataset
 from .outputs import OutputWriter
 
@@ -17,12 +17,12 @@ def datasetGPT() -> None:
               envvar="OPENAI_API_KEY",
               help="OpenAI API key.")
 @click.option("--agent1",
-              "-a1",
+              "-a",
               type=str,
               required=True,
               help="Agent role description.")
 @click.option("--agent2",
-              "-a2",
+              "-b",
               type=str,
               required=True,
               help="Agent role description.")
@@ -42,7 +42,7 @@ def datasetGPT() -> None:
               default="Goodbye",
               help="Interrupt after this phrase is outputted by one of the agents.")
 @click.option("--end-agent",
-              "-i",
+              "-d",
               type=click.Choice(["agent1", "agent2", "both"]),
               default="both",
               help="In which agent's messages to look for the end phrase.")
@@ -60,6 +60,12 @@ def datasetGPT() -> None:
               multiple=True,
               default=[0],
               help="Possible temperature values for the backend language model.")
+@click.option("--option",
+              "-o",
+              "options",
+              type=(str, str),
+              multiple=True,
+              help="Values for additional options denoted in your agent description by {OPTION_NAME}.")
 @click.option("--path",
               "-p",
               type=click.Path(),
@@ -79,6 +85,7 @@ def conversations(
     end_agent: str,
     lengths: List[int],
     temperatures: List[int],
+    options: List[Tuple[str, str]],
     path: str,
     single_file: bool
 ) -> None:
@@ -93,7 +100,8 @@ def conversations(
                                                end_phrase=end_phrase,
                                                end_agent=end_agent,
                                                lengths=lengths,
-                                               temperatures=temperatures)
+                                               temperatures=temperatures,
+                                               options=options)
 
     for result in generator:
         output_writer.save_intermediate_result(result)
