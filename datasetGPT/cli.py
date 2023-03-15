@@ -1,6 +1,7 @@
 import click
 from typing import List
 from .conversations import generate_conversations_dataset
+from .outputs import OutputWriter
 
 
 @click.group()
@@ -15,6 +16,16 @@ def datasetGPT() -> None:
               type=str,
               envvar="OPENAI_API_KEY",
               help="OpenAI API key.")
+@click.option("--agent1",
+              "-a1",
+              type=str,
+              required=True,
+              help="Agent role description.")
+@click.option("--agent2",
+              "-a2",
+              type=str,
+              required=True,
+              help="Agent role description.")
 @click.option("--num-samples",
               "-n",
               type=int,
@@ -42,42 +53,55 @@ def datasetGPT() -> None:
               multiple=True,
               default=[5],
               help="Maximum number of utterances for each agent. A conversation sample will be generated for each length.")
-@click.option("--agent1",
-              "-a1",
-              type=str,
-              required=True,
-              help="Agent role description.")
-@click.option("--agent2",
-              "-a2",
-              type=str,
-              required=True,
-              help="Agent role description.")
+@click.option("--temperature",
+              "-t",
+              "temperatures",
+              type=float,
+              multiple=True,
+              default=[0],
+              help="Possible temperature values for the backend language model.")
+@click.option("--path",
+              "-p",
+              type=click.Path(),
+              help="Where to save the dataset.")
+@click.option("--single-file",
+              "-s",
+              type=bool,
+              is_flag=True,
+              help="Either save the whole dataset to a single file or create multiple files.")
 def conversations(
     openai_api_key: str,
+    agent1: str,
+    agent2: str,
     num_samples: int,
     interruption: str,
     end_phrase: str,
     end_agent: str,
     lengths: List[int],
-    agent1: str,
-    agent2: str
+    temperatures: List[int],
+    path: str,
+    single_file: bool
 ) -> None:
     """Produce conversations between two gpt-3.5-turbo agents with given roles."""
-    dataset = generate_conversations_dataset(openai_api_key=openai_api_key,
-                                             num_samples=num_samples,
-                                             interruption=interruption,
-                                             end_phrase=end_phrase,
-                                             end_agent=end_agent,
-                                             lengths=lengths,
-                                             agent1=agent1,
-                                             agent2=agent2)
+    output_writer = OutputWriter(path, single_file)
 
-    # TODO: Data saving
-    print(dataset)
+    generator = generate_conversations_dataset(openai_api_key=openai_api_key,
+                                               agent1=agent1,
+                                               agent2=agent2,
+                                               num_samples=num_samples,
+                                               interruption=interruption,
+                                               end_phrase=end_phrase,
+                                               end_agent=end_agent,
+                                               lengths=lengths,
+                                               temperatures=temperatures)
+
+    for result in generator:
+        output_writer.save_intermediate_result(result)
 
 
 datasetGPT.add_command(conversations)
 
 
 def main() -> None:
+    """Run the datasetGPT CLI."""
     datasetGPT()
