@@ -26,7 +26,6 @@ def initialize_conversation_chain(
     config: Dict[str, Any]
 ) -> Tuple[ConversationChain, str]:
     """Initialize a conversation and return a chain and a formatted system prompt."""
-
     system_template = SystemMessagePromptTemplate.from_template(system_prompt)
     system_config = {key: config[key]
                      for key in system_template.input_variables}
@@ -108,8 +107,7 @@ def generate_conversation(
             if end_phrase in chain2_out:
                 break
 
-    return {"length": config["length"],
-            "temperature": config["temperature"],
+    return {**config,
             "agent1": system_prompt1,
             "agent2": system_prompt2,
             "history": history}
