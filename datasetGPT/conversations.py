@@ -1,6 +1,5 @@
-import itertools
 from dataclasses import dataclass, field
-from typing import List, Any, Dict, Tuple, Union, Generator, Iterator
+from typing import List, Any, Dict, Tuple, Union
 
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -14,6 +13,8 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import SystemMessage
 
+from .base import DatasetGenerator
+
 
 @dataclass
 class ConversationsGeneratorConfig:
@@ -24,7 +25,7 @@ class ConversationsGeneratorConfig:
     agent2: str
     """Description of the second agent used to construct its system message."""
     num_samples: int = 1
-    """Number of conversations to generate for each configuration."""
+    """Number of conversations to generate for each options combination."""
     interruption: str = "length"
     """Interruption mode."""
     end_phrase: str = "Goodbye!"
@@ -39,39 +40,20 @@ class ConversationsGeneratorConfig:
     """Additional options defined in the system prompts with curly brackets."""
 
 
-class ConversationsGenerator:
-    """Dataset generator for a given conversation configuration."""
-
-    config: ConversationsGeneratorConfig
-    """Dataset configuration to use."""
-    conversation_configs: List[Dict[str, Any]]
-    """Possible configurations for each conversation."""
-    generator_index: int = 0
-    """Index of the conversation config to use in the next iteration."""
+class ConversationsGenerator(DatasetGenerator):
+    """Generator producing conversations between two AI agents."""
 
     def __init__(self, config: ConversationsGeneratorConfig) -> None:
-        """Initializes ConversationsGenerator"""
-        self.config = config
-        self.initialize_conversation_configs()
+        """Initialize ConversationsGenerator."""
+        super().__init__(config)
 
-    def initialize_conversation_configs(self) -> None:
-        """Initialize all possible conversation configurations."""
-        options_keys = ["length", "temperature", "sample_id"]
-        options_values = [self.config.lengths,
-                          self.config.temperatures,
-                          range(self.config.num_samples)]
-
-        for option in self.config.options:
-            if option[0] not in options_keys:
-                options_keys.append(option[0])
-                options_values.append([option[1]])
-            else:
-                index = options_keys.index(option[0])
-                if option[1] not in options_values[index]:
-                    options_values[index].append(option[1])
-
-        self.conversation_configs = list(map(lambda x: dict(zip(options_keys, x)),
-                                        itertools.product(*options_values)))
+    def initialize_options_configs(
+        self,
+        options_config_keys: List[str] = ["length", "temperature"],
+        generator_config_keys: List[str] = ["lengths", "temperatures"]
+    ) -> None:
+        """Prepare options combinations."""
+        super().initialize_options_configs(options_config_keys, generator_config_keys)
 
     def initialize_chain(
         self,
@@ -103,22 +85,22 @@ class ConversationsGenerator:
 
         return chain, system_message
 
-    def check_iterruption(self, agent: str, message: str) -> bool:
+    def end_phrase_interruption(self, agent: str, message: str) -> None:
         """Check whether to interrupt conversation generation."""
         if self.config.interruption == "end_phrase":
             if self.config.end_agent == agent or self.config.end_agent == "both":
                 if self.config.end_phrase in message:
                     raise StopIteration()
 
-    def generate_conversation(
+    def generate_item(
         self,
         initial_utterance: str = "Hello!"
     ) -> Dict[str, Union[List[List[Any]], float, int]]:
         """Run two chains to talk with one another and record the chat history."""
-        if self.generator_index >= len(self.conversation_configs):
+        if self.generator_index >= len(self.options_configs):
             raise StopIteration()
 
-        conversation_config = self.conversation_configs[self.generator_index]
+        conversation_config = self.options_configs[self.generator_index]
         self.generator_index += 1
 
         chain1, system_prompt1 = self.initialize_chain("agent1",
@@ -135,21 +117,14 @@ class ConversationsGenerator:
         for _ in range(conversation_config["length"]):
             chain1_out = chain1.predict(input=chain1_inp)
             utterances.append(["agent1", chain1_out])
-            self.check_iterruption("agent1", chain1_out)
+            self.end_phrase_interruption("agent1", chain1_out)
 
             chain2_out = chain2.predict(input=chain1_out)
             utterances.append(["agent2", chain2_out])
-            self.check_iterruption("agent2", chain2_out)
+            self.end_phrase_interruption("agent2", chain2_out)
             chain1_inp = chain2_out
 
         return {**conversation_config,
                 "agent1": system_prompt1,
                 "agent2": system_prompt2,
                 "utterances": utterances}
-
-    def __next__(self) -> Generator[Dict[str, Any], None, None]:
-        """Generate a conversation."""
-        return self.generate_conversation()
-        
-    def __iter__(self) -> Iterator:
-        return self 
