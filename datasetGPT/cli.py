@@ -1,7 +1,7 @@
 import click
 from typing import List, Tuple
-from .conversations import generate_conversations_dataset
-from .outputs import OutputWriter
+from .conversations import ConversationsGenerator, ConversationsGeneratorConfig
+from .outputs import DatasetWriter
 
 
 @click.group()
@@ -90,21 +90,23 @@ def conversations(
     single_file: bool
 ) -> None:
     """Produce conversations between two gpt-3.5-turbo agents with given roles."""
-    output_writer = OutputWriter(path, single_file)
+    dataset_writer = DatasetWriter(path, single_file)
 
-    generator = generate_conversations_dataset(openai_api_key=openai_api_key,
-                                               agent1=agent1,
-                                               agent2=agent2,
-                                               num_samples=num_samples,
-                                               interruption=interruption,
-                                               end_phrase=end_phrase,
-                                               end_agent=end_agent,
-                                               lengths=lengths,
-                                               temperatures=temperatures,
-                                               options=options)
+    generator_config = ConversationsGeneratorConfig(openai_api_key=openai_api_key,
+                                                    agent1=agent1,
+                                                    agent2=agent2,
+                                                    num_samples=num_samples,
+                                                    interruption=interruption,
+                                                    end_phrase=end_phrase,
+                                                    end_agent=end_agent,
+                                                    lengths=lengths,
+                                                    temperatures=temperatures,
+                                                    options=options)
 
-    for result in generator:
-        output_writer.save_intermediate_result(result)
+    conversations_generator = ConversationsGenerator(generator_config)
+
+    for conversation in conversations_generator:
+        dataset_writer.save_intermediate_result(conversation)
 
 
 datasetGPT.add_command(conversations)

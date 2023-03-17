@@ -1,5 +1,6 @@
 import itertools
-from typing import List, Any, Dict, Generator, Tuple, Union
+from dataclasses import dataclass, field
+from typing import List, Any, Dict, Tuple, Union, Generator, Iterator
 
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -13,138 +14,142 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import SystemMessage
 
-from openai.error import (
-    RateLimitError,
-    APIConnectionError,
-    ServiceUnavailableError
-)
+
+@dataclass
+class ConversationsGeneratorConfig:
+    openai_api_key: str
+    """OpenAI API key."""
+    agent1: str
+    """Description of the first agent used to construct its system message."""
+    agent2: str
+    """Description of the second agent used to construct its system message."""
+    num_samples: int = 1
+    """Number of conversations to generate for each configuration."""
+    interruption: str = "length"
+    """Interruption mode."""
+    end_phrase: str = "Goodbye!"
+    """Phrase to look for when checking whether to interrupt a conversation."""
+    end_agent: str = "both"
+    """Agent whose messages to check for the interruption phrase."""
+    lengths: List[int] = field(default_factory=lambda: [5])
+    """Possible lengths of the conversations. If end_phrase interruption is enabled these will be used for maximum lengths."""
+    temperatures: List[int] = field(default_factory=lambda: [0])
+    """Possible temperatures for the backend LLM."""
+    options: List[Tuple[str, str]] = field(default_factory=lambda: [])
+    """Additional options defined in the system prompts with curly brackets."""
 
 
-def initialize_conversation_chain(
-    openai_api_key: str,
-    system_prompt: str,
-    config: Dict[str, Any]
-) -> Tuple[ConversationChain, str]:
-    """Initialize a conversation and return a chain and a formatted system prompt."""
-    system_template = SystemMessagePromptTemplate.from_template(system_prompt)
-    system_config = {key: config[key]
-                     for key in system_template.input_variables}
-    system_content = system_template.format(**system_config).content
+class ConversationsGenerator:
+    """Dataset generator for a given conversation configuration."""
 
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessage(content=system_content),
-        MessagesPlaceholder(variable_name="history"),
-        HumanMessagePromptTemplate.from_template("{input}")
-    ])
+    config: ConversationsGeneratorConfig
+    """Dataset configuration to use."""
+    conversation_configs: List[Dict[str, Any]]
+    """Possible configurations for each conversation."""
+    generator_index: int = 0
+    """Index of the conversation config to use in the next iteration."""
 
-    memory = ConversationBufferMemory(return_messages=True)
-    llm = ChatOpenAI(temperature=config["temperature"],
-                     openai_api_key=openai_api_key)
-    chain = ConversationChain(memory=memory, prompt=prompt, llm=llm)
+    def __init__(self, config: ConversationsGeneratorConfig) -> None:
+        """Initializes ConversationsGenerator"""
+        self.config = config
+        self.initialize_conversation_configs()
 
-    return chain, system_content
+    def initialize_conversation_configs(self) -> None:
+        """Initialize all possible conversation configurations."""
+        options_keys = ["length", "temperature", "sample_id"]
+        options_values = [self.config.lengths,
+                          self.config.temperatures,
+                          range(self.config.num_samples)]
 
+        for option in self.config.options:
+            if option[0] not in options_keys:
+                options_keys.append(option[0])
+                options_values.append([option[1]])
+            else:
+                index = options_keys.index(option[0])
+                if option[1] not in options_values[index]:
+                    options_values[index].append(option[1])
 
-def safe_predict(
-    chain: ConversationChain,
-    input: str,
-    retrying: bool = False,
-) -> None:
-    """Get a prediction from the chain with a single retry on connection or rate limit errors."""
-    try:
-        return chain.predict(input=input)
-    except (RateLimitError, APIConnectionError, ServiceUnavailableError) as e:
-        print("An error has occurred!", e)
+        self.conversation_configs = list(map(lambda x: dict(zip(options_keys, x)),
+                                        itertools.product(*options_values)))
 
-        if retrying != True:
-            print("Retrying...")
-            return safe_predict(chain, input, True)
+    def initialize_chain(
+        self,
+        agent: str,
+        system_prompt: str,
+        conversation_config: Dict[str, Any]
+    ) -> Tuple[ConversationChain, str]:
+        """Initialize a conversation and return a chain and a formatted system prompt."""
+        if self.config.interruption == "end_phrase":
+            if self.config.end_agent == agent or self.config.end_agent == "both":
+                system_prompt += f" When the whole conversation is over end with \"{self.config.end_phrase}\"."
 
+        system_template = SystemMessagePromptTemplate.from_template(
+            system_prompt)
+        template_params = {key: conversation_config[key]
+                           for key in system_template.input_variables}
+        system_message = system_template.format(**template_params).content
 
-def generate_conversation(
-    openai_api_key: str,
-    agent1: str,
-    agent2: str,
-    interruption: str,
-    end_phrase: str,
-    end_agent: str,
-    config: Dict[str, Any],
-    utterance: str = "Hello!"
-) -> Dict[str, Union[List[List[Any]], float, int]]:
-    """Run two chains to talk with one another and record the chat history."""
-    if interruption == "end_phrase":
-        if end_agent == "agent1" or end_agent == "both":
-            agent1 += f" When the whole conversation is over end with \"{end_phrase}\"."
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content=system_message),
+            MessagesPlaceholder(variable_name="history"),
+            HumanMessagePromptTemplate.from_template("{input}")
+        ])
 
-        if end_agent == "agent2" or end_agent == "both":
-            agent2 += f" When the whole conversation is over end with \"{end_phrase}\"."
+        memory = ConversationBufferMemory(return_messages=True)
+        llm = ChatOpenAI(temperature=conversation_config["temperature"],
+                         openai_api_key=self.config.openai_api_key)
+        chain = ConversationChain(memory=memory, prompt=prompt, llm=llm)
 
-    chain1, system_prompt1 = initialize_conversation_chain(
-        openai_api_key=openai_api_key,
-        system_prompt=agent1,
-        config=config)
+        return chain, system_message
 
-    chain2, system_prompt2 = initialize_conversation_chain(
-        openai_api_key=openai_api_key,
-        system_prompt=agent2,
-        config=config)
+    def check_iterruption(self, agent: str, message: str) -> bool:
+        """Check whether to interrupt conversation generation."""
+        if self.config.interruption == "end_phrase":
+            if self.config.end_agent == agent or self.config.end_agent == "both":
+                if self.config.end_phrase in message:
+                    raise StopIteration()
 
-    history = []
+    def generate_conversation(
+        self,
+        initial_utterance: str = "Hello!"
+    ) -> Dict[str, Union[List[List[Any]], float, int]]:
+        """Run two chains to talk with one another and record the chat history."""
+        if self.generator_index >= len(self.conversation_configs):
+            raise StopIteration()
 
-    for _ in range(config["length"]):
-        chain1_out = safe_predict(chain1, utterance)
-        history.append(["agent1", chain1_out])
+        conversation_config = self.conversation_configs[self.generator_index]
+        self.generator_index += 1
 
-        if interruption == "end_phrase" and end_agent != "agent2":
-            if end_phrase in chain1_out:
-                break
+        chain1, system_prompt1 = self.initialize_chain("agent1",
+                                                       self.config.agent1,
+                                                       conversation_config)
 
-        chain2_out = safe_predict(chain2, chain1_out)
-        history.append(["agent2", chain2_out])
-        utterance = chain2_out
+        chain2, system_prompt2 = self.initialize_chain("agent2",
+                                                       self.config.agent2,
+                                                       conversation_config)
 
-        if interruption == "end_phrase" and end_agent != "agent1":
-            if end_phrase in chain2_out:
-                break
+        utterances = []
 
-    return {**config,
-            "agent1": system_prompt1,
-            "agent2": system_prompt2,
-            "history": history}
+        chain1_inp = initial_utterance
+        for _ in range(conversation_config["length"]):
+            chain1_out = chain1.predict(input=chain1_inp)
+            utterances.append(["agent1", chain1_out])
+            self.check_iterruption("agent1", chain1_out)
 
+            chain2_out = chain2.predict(input=chain1_out)
+            utterances.append(["agent2", chain2_out])
+            self.check_iterruption("agent2", chain2_out)
+            chain1_inp = chain2_out
 
-def generate_conversations_dataset(
-    openai_api_key: str,
-    agent1: str,
-    agent2: str,
-    num_samples: int = 1,
-    interruption: str = "length",
-    end_phrase: str = "Goodbye!",
-    end_agent: str = "both",
-    lengths: List[int] = [5],
-    temperatures: List[int] = 0,
-    options: List[Tuple[str, str]] = []
-) -> Generator[Dict[str, Any], None, None]:
-    """Iterate possible configurations and generate a conversation for each one."""
-    options_keys = ["length", "temperature", "sample_id"]
-    options_values = [lengths, temperatures, range(num_samples)]
+        return {**conversation_config,
+                "agent1": system_prompt1,
+                "agent2": system_prompt2,
+                "utterances": utterances}
 
-    for option in options:
-        if option[0] not in options_keys:
-            options_keys.append(option[0])
-            options_values.append([option[1]])
-        else:
-            index = options_keys.index(option[0])
-            if option[1] not in options_values[index]:
-                options_values[index].append(option[1])
-
-    for config_values in itertools.product(*options_values):
-        config = dict(zip(options_keys, config_values))
-
-        yield generate_conversation(openai_api_key=openai_api_key,
-                                    agent1=agent1,
-                                    agent2=agent2,
-                                    interruption=interruption,
-                                    end_phrase=end_phrase,
-                                    end_agent=end_agent,
-                                    config=config)
+    def __next__(self) -> Generator[Dict[str, Any], None, None]:
+        """Generate a conversation."""
+        return self.generate_conversation()
+        
+    def __iter__(self) -> Iterator:
+        return self 
