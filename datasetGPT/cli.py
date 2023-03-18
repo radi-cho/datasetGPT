@@ -1,6 +1,8 @@
 import click
 from typing import List, Tuple
-from .conversations import ConversationsGenerator, ConversationsGeneratorConfig
+
+from .conversations import ConversationsGeneratorConfig, ConversationsGenerator
+from .texts import TextsGeneratorConfig, TextsGenerator
 from .outputs import DatasetWriter
 
 
@@ -10,39 +12,76 @@ def datasetGPT() -> None:
     pass
 
 
+click_options = click.option("--option",
+                             "-o",
+                             "options",
+                             type=(str, str),
+                             multiple=True,
+                             help="Values for additional options denoted in your prompts by {OPTION_NAME}.")
+
+click_path = click.option("--path",
+                          "-f",
+                          "path",
+                          type=click.Path(),
+                          help="Where to save the dataset. Either a file or a directory (folder).")
+
+click_single_file = click.option("--single-file",
+                                 "-s",
+                                 "single_file",
+                                 type=bool,
+                                 is_flag=True,
+                                 help="Either save the whole dataset to a single file or create multiple files.")
+
+click_num_samples = click.option("--num-samples",
+                                 "-n",
+                                 "num_samples",
+                                 type=int,
+                                 default=1,
+                                 help="Number of conversations for each configuration.")
+
+click_temperatures = click.option("--temperature",
+                                  "-t",
+                                  "temperatures",
+                                  type=float,
+                                  multiple=True,
+                                  default=[0.5],
+                                  help="Possible temperature values for the backend language model.")
+
+
 @click.command()
 @click.option("--openai-api-key",
               "-k",
+              "openai_api_key",
               type=str,
               envvar="OPENAI_API_KEY",
               help="OpenAI API key.")
 @click.option("--agent1",
               "-a",
+              "agent1",
               type=str,
               required=True,
               help="Agent role description.")
 @click.option("--agent2",
               "-b",
+              "agent2",
               type=str,
               required=True,
               help="Agent role description.")
-@click.option("--num-samples",
-              "-n",
-              type=int,
-              default=1,
-              help="Number of conversations for each configuration.")
 @click.option("--interruption",
               "-i",
+              "interruption",
               type=click.Choice(["length", "end_phrase"]),
               default="length",
               help="Interruption mode.")
 @click.option("--end-phrase",
               "-e",
+              "end_phrase",
               type=str,
               default="Goodbye",
               help="Interrupt after this phrase is outputted by one of the agents.")
 @click.option("--end-agent",
               "-d",
+              "end_agent",
               type=click.Choice(["agent1", "agent2", "both"]),
               default="both",
               help="In which agent's messages to look for the end phrase.")
@@ -53,28 +92,11 @@ def datasetGPT() -> None:
               multiple=True,
               default=[5],
               help="Maximum number of utterances for each agent. A conversation sample will be generated for each length.")
-@click.option("--temperature",
-              "-t",
-              "temperatures",
-              type=float,
-              multiple=True,
-              default=[0],
-              help="Possible temperature values for the backend language model.")
-@click.option("--option",
-              "-o",
-              "options",
-              type=(str, str),
-              multiple=True,
-              help="Values for additional options denoted in your agent description by {OPTION_NAME}.")
-@click.option("--path",
-              "-p",
-              type=click.Path(),
-              help="Where to save the dataset.")
-@click.option("--single-file",
-              "-s",
-              type=bool,
-              is_flag=True,
-              help="Either save the whole dataset to a single file or create multiple files.")
+@click_temperatures
+@click_num_samples
+@click_options
+@click_path
+@click_single_file
 def conversations(
     openai_api_key: str,
     agent1: str,
@@ -109,6 +131,59 @@ def conversations(
         dataset_writer.save_intermediate_result(conversation)
 
 
+@click.command()
+@click.option("--prompt",
+              "-p",
+              "prompt",
+              type=str,
+              required=True,
+              help="Input prompt.")
+@click.option("--backend",
+              "-b",
+              "backends",
+              type=str,
+              multiple=True,
+              default=["openai|text-davinci-003"],
+              help="LLM APIs to use as backends. Use \"backend|model_name\" notation. For example: \"openai|text-davinci-003\".")
+@click.option("--max-length",
+              "-l",
+              "max_lengths",
+              type=int,
+              multiple=True,
+              default=[100],
+              help="Maximum number of tokens to generate for each prompt.")
+@click_temperatures
+@click_num_samples
+@click_options
+@click_path
+@click_single_file
+def texts(
+    prompt: str,
+    num_samples: int,
+    max_lengths: List[int],
+    temperatures: List[int],
+    backends: List[str],
+    options: List[Tuple[str, str]],
+    path: str,
+    single_file: bool
+) -> None:
+    """Inference multiple LLMs at scale."""
+    dataset_writer = DatasetWriter(path, single_file)
+
+    generator_config = TextsGeneratorConfig(prompt=prompt,
+                                            backends=backends,
+                                            num_samples=num_samples,
+                                            max_lengths=max_lengths,
+                                            temperatures=temperatures,
+                                            options=options)
+
+    texts_generator = TextsGenerator(generator_config)
+
+    for text_object in texts_generator:
+        dataset_writer.save_intermediate_result(text_object)
+
+
+datasetGPT.add_command(texts)
 datasetGPT.add_command(conversations)
 
 

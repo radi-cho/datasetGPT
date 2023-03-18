@@ -43,6 +43,9 @@ class ConversationsGeneratorConfig:
 class ConversationsGenerator(DatasetGenerator):
     """Generator producing conversations between two AI agents."""
 
+    config: ConversationsGeneratorConfig
+    """Configuration for a ConversationsGenerator."""
+
     def __init__(self, config: ConversationsGeneratorConfig) -> None:
         """Initialize ConversationsGenerator."""
         super().__init__(config)

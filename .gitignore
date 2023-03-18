@@ -154,3 +154,6 @@ cython_debug/
 
 # macOS local attributes
 .DS_Store
+
+# Local experimentation
+lab
