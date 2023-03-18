@@ -14,13 +14,24 @@ Possible use cases may include:
 
 ## Installation
 
-Under active development. Coming to `PyPI` soon. Currently you can run `datasetGPT` by cloning this repository as described [here](#contributing).
+```
+pip install datasetGPT
+```
+
+Most of the generation features rely on third-party APIs. Install their respective packages:
+
+```
+pip install openai cohere petals
+```
 
 ## Usage examples
 
 ### Inference LLMs at scale
 
 ```bash
+export OPENAI_API_KEY="..."
+export COHERE_API_KEY="..."
+
 datasetGPT texts \             
     --prompt "If {country} was a planet in the Star Wars universe it would be called" \
     --backend "openai|text-davinci-003" \
@@ -139,6 +150,8 @@ for conversation in conversations_generator:
 ```
 
 ## Contributing
+
+> Still under active development.
 
 Contributions will be highly appreciated. Currently these features are under development:
 - [x] `datasetGPT conversations` - Make two ChatGPT agents talk with one another and record the conversation history.
