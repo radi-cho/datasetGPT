@@ -15,6 +15,9 @@ from langchain.schema import SystemMessage
 
 from .base import DatasetGenerator
 
+OPTIONS_CONFIG_KEYS = ["length", "temperature", "initial_utterance"]
+GENERATOR_CONFIG_KEYS = ["lengths", "temperatures", "initial_utterances"]
+
 
 @dataclass
 class ConversationsGeneratorConfig:
@@ -24,8 +27,8 @@ class ConversationsGeneratorConfig:
     """Description of the first agent used to construct its system message."""
     agent2: str
     """Description of the second agent used to construct its system message."""
-    initial_utterance: str
-    """Utterance to be provisioned to the first agent."""
+    initial_utterances: List[str]
+    """Utterances to be provisioned to the first agent."""
     num_samples: int = 1
     """Number of conversations to generate for each options combination."""
     interruption: str = "length"
@@ -54,8 +57,8 @@ class ConversationsGenerator(DatasetGenerator):
 
     def initialize_options_configs(
         self,
-        options_config_keys: List[str] = ["length", "temperature"],
-        generator_config_keys: List[str] = ["lengths", "temperatures"]
+        options_config_keys: List[str] = OPTIONS_CONFIG_KEYS,
+        generator_config_keys: List[str] = GENERATOR_CONFIG_KEYS
     ) -> None:
         """Prepare options combinations."""
         super().initialize_options_configs(options_config_keys, generator_config_keys)
@@ -115,7 +118,7 @@ class ConversationsGenerator(DatasetGenerator):
 
         utterances = []
 
-        chain1_inp = self.config.initial_utterance
+        chain1_inp = conversation_config["initial_utterance"]
         for _ in range(conversation_config["length"]):
             chain1_out = chain1.predict(input=chain1_inp)
             utterances.append(["agent1", chain1_out])
