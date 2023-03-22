@@ -19,7 +19,7 @@ class DatasetGenerator:
     options_configs: List[Dict[str, Any]]
     """Possible combinations of the provided options."""
     generator_index: int = 0
-    """Index of the next item be returned by the generator."""
+    """Index of the next item to be returned by the generator."""
 
     def __init__(self, config: DatasetGeneratorConfig) -> None:
         self.config = config

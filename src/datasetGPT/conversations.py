@@ -24,6 +24,8 @@ class ConversationsGeneratorConfig:
     """Description of the first agent used to construct its system message."""
     agent2: str
     """Description of the second agent used to construct its system message."""
+    initial_utterance: str
+    """Utterance to be provisioned to the first agent."""
     num_samples: int = 1
     """Number of conversations to generate for each options combination."""
     interruption: str = "length"
@@ -95,10 +97,7 @@ class ConversationsGenerator(DatasetGenerator):
                 if self.config.end_phrase in message:
                     raise StopIteration()
 
-    def generate_item(
-        self,
-        initial_utterance: str = "Hello!"
-    ) -> Dict[str, Union[List[List[Any]], float, int]]:
+    def generate_item(self) -> Dict[str, Union[List[List[Any]], float, int]]:
         """Run two chains to talk with one another and record the chat history."""
         if self.generator_index >= len(self.options_configs):
             raise StopIteration()
@@ -116,7 +115,7 @@ class ConversationsGenerator(DatasetGenerator):
 
         utterances = []
 
-        chain1_inp = initial_utterance
+        chain1_inp = self.config.initial_utterance
         for _ in range(conversation_config["length"]):
             chain1_out = chain1.predict(input=chain1_inp)
             utterances.append(["agent1", chain1_out])
