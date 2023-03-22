@@ -7,6 +7,9 @@ from langchain.chains import LLMChain
 
 from .base import DatasetGenerator
 
+OPTIONS_CONFIG_KEYS = ["backend", "max_length", "temperature"]
+GENERATOR_CONFIG_KEYS =  ["backends", "max_lengths", "temperatures"]
+
 
 @dataclass
 class TextsGeneratorConfig:
@@ -36,12 +39,8 @@ class TextsGenerator(DatasetGenerator):
 
     def initialize_options_configs(
         self,
-        options_config_keys: List[str] = ["backend",
-                                          "max_length",
-                                          "temperature"],
-        generator_config_keys: List[str] = ["backends",
-                                            "max_lengths",
-                                            "temperatures"]
+        options_config_keys: List[str] = OPTIONS_CONFIG_KEYS,
+        generator_config_keys: List[str] = GENERATOR_CONFIG_KEYS
     ) -> None:
         """Prepare options combinations."""
         super().initialize_options_configs(options_config_keys, generator_config_keys)

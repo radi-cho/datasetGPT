@@ -1,6 +1,10 @@
 import itertools
 from typing import List, Any, Dict, Tuple, Generator, Iterator, Protocol
 
+OPTIONS_CONFIG_KEYS = ["temperature"]
+GENERATOR_CONFIG_KEYS =  ["temperatures"]
+
+
 class DatasetGeneratorConfig(Protocol):
     """Base generator configuration protocol."""
     openai_api_key: str
@@ -27,8 +31,8 @@ class DatasetGenerator:
 
     def initialize_options_configs(
         self,
-        options_config_keys: List[str] = ["temperature"],
-        generator_config_keys: List[str] = ["temperatures"]
+        options_config_keys: List[str] = OPTIONS_CONFIG_KEYS,
+        generator_config_keys: List[str] = GENERATOR_CONFIG_KEYS
     ) -> None:
         """Prepare options combinations."""
         options_keys = ["sample_id", *options_config_keys]
