@@ -93,12 +93,14 @@ class ConversationsGenerator(DatasetGenerator):
 
         return chain, system_message
 
-    def end_phrase_interruption(self, agent: str, message: str) -> None:
+    def end_phrase_interruption(self, agent: str, message: str) -> bool:
         """Check whether to interrupt conversation generation."""
         if self.config.interruption == "end_phrase":
             if self.config.end_agent == agent or self.config.end_agent == "both":
                 if self.config.end_phrase in message:
-                    raise StopIteration()
+                    return True
+
+        return False
 
     def generate_item(self) -> Dict[str, Union[List[List[Any]], float, int]]:
         """Run two chains to talk with one another and record the chat history."""
@@ -122,11 +124,16 @@ class ConversationsGenerator(DatasetGenerator):
         for _ in range(conversation_config["length"]):
             chain1_out = chain1.predict(input=chain1_inp)
             utterances.append(["agent1", chain1_out])
-            self.end_phrase_interruption("agent1", chain1_out)
+
+            if self.end_phrase_interruption("agent1", chain1_out):
+                break
 
             chain2_out = chain2.predict(input=chain1_out)
             utterances.append(["agent2", chain2_out])
-            self.end_phrase_interruption("agent2", chain2_out)
+
+            if self.end_phrase_interruption("agent2", chain2_out):
+                break
+
             chain1_inp = chain2_out
 
         return {**conversation_config,
