@@ -21,7 +21,7 @@ class TextsGeneratorConfig:
     """Number of texts to generate for each options combination."""
     max_lengths: List[int] = field(default_factory=lambda: [5])
     """Maximum lengths in tokens for the output of each generation."""
-    temperatures: List[int] = field(default_factory=lambda: [0])
+    temperatures: List[float] = field(default_factory=lambda: [0])
     """Possible temperatures for the backend LLM."""
     options: List[Tuple[str, str]] = field(default_factory=lambda: [])
     """Additional options defined in the system prompts with curly brackets."""

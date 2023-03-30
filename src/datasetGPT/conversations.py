@@ -39,7 +39,7 @@ class ConversationsGeneratorConfig:
     """Agent whose messages to check for the interruption phrase."""
     lengths: List[int] = field(default_factory=lambda: [5])
     """Possible lengths of the conversations. If end_phrase interruption is enabled these will be used for maximum lengths."""
-    temperatures: List[int] = field(default_factory=lambda: [0])
+    temperatures: List[float] = field(default_factory=lambda: [0])
     """Possible temperatures for the backend LLM."""
     options: List[Tuple[str, str]] = field(default_factory=lambda: [])
     """Additional options defined in the system prompts with curly brackets."""
