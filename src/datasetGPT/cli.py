@@ -71,7 +71,7 @@ click_temperatures = click.option("--temperature",
               "-u",
               "initial_utterances",
               type=str,
-              default=["Hello!"],
+              default=["Hello."],
               multiple=True,
               help="Utterance to be provisioned to the first agent. For many use cases a \"Hello\" is enough.")
 @click.option("--interruption",

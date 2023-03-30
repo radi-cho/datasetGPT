@@ -27,7 +27,7 @@ class ConversationsGeneratorConfig:
     """Description of the first agent used to construct its system message."""
     agent2: str
     """Description of the second agent used to construct its system message."""
-    initial_utterances: List[str]
+    initial_utterances: List[str] = "Hello."
     """Utterances to be provisioned to the first agent."""
     num_samples: int = 1
     """Number of conversations to generate for each options combination."""
