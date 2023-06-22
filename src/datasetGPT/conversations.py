@@ -27,7 +27,7 @@ class ConversationsGeneratorConfig:
     """Description of the first agent used to construct its system message."""
     agent2: str
     """Description of the second agent used to construct its system message."""
-    initial_utterances: List[str] = "Hello."
+    initial_utterances: List[str] = field(default_factory=lambda: ["Hello."])
     """Utterances to be provisioned to the first agent."""
     num_samples: int = 1
     """Number of conversations to generate for each options combination."""
@@ -61,6 +61,7 @@ class ConversationsGenerator(DatasetGenerator):
         generator_config_keys: List[str] = GENERATOR_CONFIG_KEYS
     ) -> None:
         """Prepare options combinations."""
+        print(self.config.initial_utterances)
         super().initialize_options_configs(options_config_keys, generator_config_keys)
 
     def initialize_chain(
