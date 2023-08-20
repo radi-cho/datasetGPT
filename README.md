@@ -32,7 +32,7 @@ pip install openai cohere petals
 export OPENAI_API_KEY="..."
 export COHERE_API_KEY="..."
 
-datasetGPT texts \             
+datasetGPT texts \
     --prompt "If {country} was a planet in the Star Wars universe it would be called" \
     --backend "openai|text-davinci-003" \
     --backend "cohere|medium" \
@@ -141,7 +141,9 @@ generator_config = ConversationsGeneratorConfig(agent1="You're a shop assistant 
                                                 interruption="length",
                                                 lengths=[4, 5],
                                                 temperatures=[0.1, 0.2],
-                                                options=[("n", "2"), ("n", "3")])
+                                                options=[("n", "2"), ("n", "3")],
+                                                model="gpt-3.5-turbo" # or model="gpt-4"
+                                             )
 
 conversations_generator = ConversationsGenerator(generator_config)
 
@@ -154,6 +156,7 @@ for conversation in conversations_generator:
 > Still under active development.
 
 Contributions will be highly appreciated. Currently these features are under development:
+
 - [x] `datasetGPT conversations` - Make two ChatGPT agents talk with one another and record the conversation history.
 - [x] `datasetGPT texts` - Inference different LLMs with a given input prompt and generate multiple outputs by varying parameters.
 - [ ] `datasetGPT transformations` - Apply a list of transformations to a list of texts. For example, summarizing a list of texts for a {child | university student | PhD candidate} to understand.
@@ -208,7 +211,7 @@ Options:
 
 - You can specify multiple variants for the following options: `--length`, `--temperature`, `--num-samples`, `--option`. A dataset item will be generated for each possible combination of the supplied values.
 - Each `--option` provided must be formatted as follows: `--option option_name "Some option value"`.
-- Currently supported backends: GPT-3 model variants by [OpenAI](https://openai.com/blog/openai-api), the language models by [Cohere](https://pypi.org/project/cohere/), BLOOM through the [Petals API](https://petals.ml/).
+- Currently supported backends: GPT-3 and GPT-4 model variants by [OpenAI](https://openai.com/blog/openai-api), the language models by [Cohere](https://pypi.org/project/cohere/), BLOOM through the [Petals API](https://petals.ml/).
 
 ```
 datasetGPT conversations [OPTIONS]
@@ -231,6 +234,10 @@ Options:
                                   each length.
   -t, --temperature FLOAT         Possible temperature values for the backend
                                   language model.
+  -m, --model [gpt-3.5-turbo|gpt-4]
+                                  OpenAI Chat model to use. GPT-4 is only
+                                  supported if provided API key has access to
+                                  GPT4. Defaults to GPT-3.5-Turbo.
   -n, --num-samples INTEGER       Number of conversations for each
                                   configuration.
   -o, --option <TEXT TEXT>...     Values for additional options denoted in
