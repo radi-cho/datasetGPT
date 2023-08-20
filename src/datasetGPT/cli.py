@@ -99,6 +99,13 @@ click_temperatures = click.option("--temperature",
               multiple=True,
               default=[5],
               help="Maximum number of utterances for each agent. A conversation sample will be generated for each length.")
+@click.option("--model",
+              "-m",
+              "lengths",
+              type=click.Choice(["gpt-3.5-turbo", "gpt-4"]),
+              multiple=False,
+              default="gpt-3.5-turbo",
+              help="OpenAI Chat model to use. GPT-4 is only supported if given API key has access to GPT4. Defaults to GPT-3.5-Turbo.")
 @click_temperatures
 @click_num_samples
 @click_options
@@ -117,7 +124,8 @@ def conversations(
     temperatures: List[int],
     options: List[Tuple[str, str]],
     path: str,
-    single_file: bool
+    single_file: bool,
+    model: str
 ) -> None:
     """Produce conversations between two gpt-3.5-turbo agents with given roles."""
     dataset_writer = DatasetWriter(path, single_file)
@@ -132,7 +140,8 @@ def conversations(
                                                     end_agent=end_agent,
                                                     lengths=lengths,
                                                     temperatures=temperatures,
-                                                    options=options)
+                                                    options=options,
+                                                    model=model)
 
     conversations_generator = ConversationsGenerator(generator_config)
 
