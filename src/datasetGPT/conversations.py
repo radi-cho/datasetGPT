@@ -59,7 +59,6 @@ class ConversationsGenerator(DatasetGenerator):
 
     def __init__(self, config: ConversationsGeneratorConfig) -> None:
         """Initialize ConversationsGenerator."""
-        print("ConversationsGenerator", config)
         super().__init__(config)
 
     def initialize_options_configs(
