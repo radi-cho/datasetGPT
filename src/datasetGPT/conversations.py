@@ -43,7 +43,7 @@ class ConversationsGeneratorConfig:
     """Possible temperatures for the backend LLM."""
     options: List[Tuple[str, str]] = field(default_factory=lambda: [])
     """Additional options defined in the system prompts with curly brackets."""
-
+    model: str = "gpt-3.5-turbo"
 
 class ConversationsGenerator(DatasetGenerator):
     """Generator producing conversations between two AI agents."""
@@ -89,7 +89,7 @@ class ConversationsGenerator(DatasetGenerator):
 
         memory = ConversationBufferMemory(return_messages=True)
         llm = ChatOpenAI(temperature=conversation_config["temperature"],
-                         openai_api_key=self.config.openai_api_key)
+                         openai_api_key=self.config.openai_api_key, model=self.config.model)
         chain = ConversationChain(memory=memory, prompt=prompt, llm=llm)
 
         return chain, system_message
