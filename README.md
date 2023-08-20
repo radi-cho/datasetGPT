@@ -142,7 +142,11 @@ generator_config = ConversationsGeneratorConfig(agent1="You're a shop assistant 
                                                 lengths=[4, 5],
                                                 temperatures=[0.1, 0.2],
                                                 options=[("n", "2"), ("n", "3")],
-                                                model="gpt-3.5-turbo" # or model="gpt-4"
+                                                model="gpt-3.5-turbo", # or model="gpt-4"
+                                                # Specific models per agent can be set. If one of the parameters is set, the other must also be provided, otherwise both agents use the "model" value.
+                                                model_agent_one="gpt-3.5-turbo",
+                                                model_agent_two="gpt-4"
+
                                              )
 
 conversations_generator = ConversationsGenerator(generator_config)
@@ -238,6 +242,19 @@ Options:
                                   OpenAI Chat model to use. GPT-4 is only
                                   supported if provided API key has access to
                                   GPT4. Defaults to GPT-3.5-Turbo.
+  -m1, --model-agent1 [gpt-3.5-turbo|gpt-4]
+                                  OpenAI Chat model to use for agent1. GPT-4
+                                  is only supported if given API key has
+                                  access to GPT4. Defaults to GPT-3.5-Turbo.
+                                  If set, --model-agent2 must also be
+                                  provided, otherwise --model value will be
+                                  used.
+  -m2, --model-agent2 [gpt-3.5-turbo|gpt-4]
+                                  OpenAI Chat model to use for agent2. GPT-4
+                                  is only supported if given API key has
+                                  access to GPT4. Defaults to GPT-3.5-Turbo If
+                                  set, --model-agent1 must also be provided,
+                                  otherwise --model value will be used.
   -n, --num-samples INTEGER       Number of conversations for each
                                   configuration.
   -o, --option <TEXT TEXT>...     Values for additional options denoted in
