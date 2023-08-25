@@ -67,7 +67,6 @@ class ConversationsGenerator(DatasetGenerator):
         generator_config_keys: List[str] = GENERATOR_CONFIG_KEYS
     ) -> None:
         """Prepare options combinations."""
-        print(self.config.initial_utterances)
         super().initialize_options_configs(options_config_keys, generator_config_keys)
 
     def initialize_chain(
