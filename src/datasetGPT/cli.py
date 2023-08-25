@@ -99,6 +99,25 @@ click_temperatures = click.option("--temperature",
               multiple=True,
               default=[5],
               help="Maximum number of utterances for each agent. A conversation sample will be generated for each length.")
+@click.option("--model",
+              "-m",
+              "model",
+              type=click.Choice(["gpt-3.5-turbo", "gpt-4"]),
+              multiple=False,
+              default="gpt-3.5-turbo",
+              help="OpenAI Chat model to use. GPT-4 is only supported if given API key has access to GPT4. Defaults to GPT-3.5-Turbo.")
+@click.option("--model-agent1",
+              "-m1",
+              "model_agent_one",
+              type=click.Choice(["gpt-3.5-turbo", "gpt-4"]),
+              multiple=False,
+              help="OpenAI Chat model to use for agent1. GPT-4 is only supported if given API key has access to GPT4. Defaults to GPT-3.5-Turbo. If set, --model-agent2 must also be provided, otherwise --model value will be used.")
+@click.option("--model-agent2",
+              "-m2",
+              "model_agent_two",
+              type=click.Choice(["gpt-3.5-turbo", "gpt-4"]),
+              multiple=False,
+              help="OpenAI Chat model to use for agent2. GPT-4 is only supported if given API key has access to GPT4. Defaults to GPT-3.5-Turbo If set, --model-agent1 must also be provided, otherwise --model value will be used.")
 @click_temperatures
 @click_num_samples
 @click_options
@@ -117,7 +136,10 @@ def conversations(
     temperatures: List[int],
     options: List[Tuple[str, str]],
     path: str,
-    single_file: bool
+    single_file: bool,
+    model: str,
+    model_agent_one: str,
+    model_agent_two: str
 ) -> None:
     """Produce conversations between two gpt-3.5-turbo agents with given roles."""
     dataset_writer = DatasetWriter(path, single_file)
@@ -132,7 +154,10 @@ def conversations(
                                                     end_agent=end_agent,
                                                     lengths=lengths,
                                                     temperatures=temperatures,
-                                                    options=options)
+                                                    options=options,
+                                                    model=model,
+                                                    model_agent_one=model_agent_one,
+                                                    model_agent_two=model_agent_two)
 
     conversations_generator = ConversationsGenerator(generator_config)
 

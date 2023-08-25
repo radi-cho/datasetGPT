@@ -43,6 +43,12 @@ class ConversationsGeneratorConfig:
     """Possible temperatures for the backend LLM."""
     options: List[Tuple[str, str]] = field(default_factory=lambda: [])
     """Additional options defined in the system prompts with curly brackets."""
+    model: str = "gpt-3.5-turbo"
+    """Model to select for both agents"""
+    model_agent_one: str = "gpt-3.5-turbo"
+    """Model to select for agent1"""
+    model_agent_two: str = "gpt-3.5-turbo"
+    """Model to select for agent2"""
 
 
 class ConversationsGenerator(DatasetGenerator):
@@ -87,9 +93,17 @@ class ConversationsGenerator(DatasetGenerator):
             HumanMessagePromptTemplate.from_template("{input}")
         ])
 
+        # Select model for each agent. Only if specific model for both agents is provided, value will be used.
+        model_for_llm = self.config.model
+        if(self.config.model_agent_one and self.config.model_agent_one):
+            if(agent == "agent1"):
+                model_for_llm = self.config.model_agent_one
+            elif(agent == "agent2"):
+                model_for_llm = self.config.model_agent_two
+
         memory = ConversationBufferMemory(return_messages=True)
         llm = ChatOpenAI(temperature=conversation_config["temperature"],
-                         openai_api_key=self.config.openai_api_key)
+                         openai_api_key=self.config.openai_api_key, model=model_for_llm)
         chain = ConversationChain(memory=memory, prompt=prompt, llm=llm)
 
         return chain, system_message
