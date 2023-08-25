@@ -6,7 +6,7 @@ with open("README.md", "r", encoding = "utf-8") as readme:
 
 setup(
     name="datasetGPT",
-    version="0.0.3",
+    version="0.0.4",
     description="Generate textual and conversational datasets with LLMs.",
     long_description = long_description,
     long_description_content_type = "text/markdown",
